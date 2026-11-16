@@ -1,0 +1,6 @@
+# Allow the maintainer VPN addresses or trusted deployment runner explicitly.
+ssh_source_cidrs: []
+emergency_keys: []
+emergency_password_hash: ""
+# Set each host's data_uuid from the initialized or restored filesystem.
+data_uuid: ""

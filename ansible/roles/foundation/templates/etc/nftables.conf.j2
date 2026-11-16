@@ -1,0 +1,28 @@
+#!/usr/sbin/nft -f
+# This host owns the complete ruleset. Reassess before installing container networking.
+flush ruleset
+table inet hacklab {
+  chain input {
+    type filter hook input priority 0; policy drop;
+    iifname "lo" accept
+    ct state established,related accept
+    ct state invalid drop
+    ip protocol icmp accept
+    meta l4proto ipv6-icmp accept
+    udp sport 67 udp dport 68 accept
+{% for cidr in ssh_source_cidrs %}
+    ip saddr {{ cidr }} tcp dport 22 accept
+{% endfor %}
+{% for port in public_tcp_ports %}
+    tcp dport {{ port }} accept
+{% endfor %}
+{% for port in public_udp_ports %}
+    udp dport {{ port }} accept
+{% endfor %}
+{% for rule in private_tcp_rules %}
+    ip saddr {{ rule.source }} tcp dport {{ rule.port }} accept
+{% endfor %}
+  }
+  chain forward { type filter hook forward priority 0; policy drop; }
+  chain output { type filter hook output priority 0; policy accept; }
+}

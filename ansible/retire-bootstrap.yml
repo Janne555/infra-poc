@@ -1,0 +1,48 @@
+- name: Verify normal administration access
+  hosts: infrastructure
+  gather_facts: false
+  any_errors_fatal: true
+  strategy: linear
+  tasks:
+    - name: Require a normal administrator account
+      ansible.builtin.assert:
+        that:
+          - ansible_user is defined
+          - ansible_user not in ['bootstrap', 'emergency', 'root']
+        fail_msg: Select the normal administrator account and its inventory before retiring bootstrap access.
+
+    - name: Start a fresh SSH connection
+      ansible.builtin.meta: reset_connection
+
+    - name: Verify the new connection
+      ansible.builtin.wait_for_connection:
+        timeout: 30
+
+    - name: Verify administrative privileges
+      become: true
+      ansible.builtin.command: id -u
+      register: administrator_uid
+      changed_when: false
+      failed_when: administrator_uid.stdout != '0'
+
+- name: Retire bootstrap access
+  hosts: infrastructure
+  gather_facts: false
+  become: true
+  any_errors_fatal: true
+  strategy: linear
+  tasks:
+    - name: Remove the temporary bootstrap account and home directory
+      ansible.builtin.user:
+        name: bootstrap
+        state: absent
+        remove: true
+
+    - name: Record completed retirement on the deployment machine
+      delegate_to: localhost
+      become: false
+      when: inventory_hostname == ansible_play_hosts_all[0]
+      ansible.builtin.copy:
+        dest: "{{ bootstrap_receipt }}"
+        content: "{{ ansible_play_hosts_all | join('\n') }}\n"
+        mode: '0600'

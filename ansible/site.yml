@@ -1,0 +1,12 @@
+- name: Configure Debian foundation
+  hosts: infrastructure
+  become: true
+  vars_files:
+    - ../config.yml
+  vars:
+    service_config: "{{ services[inventory_hostname].config | default({}) }}"
+    public_tcp_ports: "{{ service_config.public_tcp_ports | default([]) }}"
+    public_udp_ports: "{{ service_config.public_udp_ports | default([]) }}"
+    private_tcp_rules: "{{ service_config.private_tcp_rules | default([]) }}"
+  roles:
+    - foundation

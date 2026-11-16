@@ -1,0 +1,6 @@
+[Unit]
+Requires=nftables.service
+After=nftables.service
+
+[Service]
+ExecStartPre=/usr/sbin/nft list chain inet hacklab input

@@ -1,0 +1,143 @@
+- name: Validate recovery prerequisites before changing access
+  ansible.builtin.assert:
+    that:
+      - ansible_distribution == 'Debian'
+      - ansible_distribution_major_version == '13'
+      - emergency_keys | unique | length >= 2
+      - emergency_keys | select('match', '^ssh-ed25519 ') | list | length == emergency_keys | length
+      - emergency_password_hash is match('^\$[y6]\$')
+      - data_uuid | length > 0
+    fail_msg: Supply two emergency public keys, an offline-escrowed password hash and the verified persistent filesystem UUID. Debian 13 is required.
+  no_log: true
+
+- name: Require an SSH access path before changing the firewall
+  ansible.builtin.assert:
+    that:
+      - ssh_source_cidrs | length > 0
+    fail_msg: Set ssh_source_cidrs for the trusted runner or maintainer VPN addresses before configuring the host firewall.
+
+- name: Install base packages
+  ansible.builtin.apt:
+    name: [sudo, nftables, auditd, ca-certificates, chrony, unattended-upgrades]
+    update_cache: true
+    state: present
+
+- name: Create independent emergency account
+  ansible.builtin.user:
+    name: emergency
+    shell: /bin/bash
+    groups: sudo
+    append: true
+    password: "{{ emergency_password_hash }}"
+    update_password: always
+  no_log: true
+
+- name: Create emergency SSH directory
+  ansible.builtin.file:
+    path: /home/emergency/.ssh
+    state: directory
+    owner: emergency
+    group: emergency
+    mode: '0700'
+
+- name: Install dedicated emergency keys
+  ansible.builtin.copy:
+    content: "{{ emergency_keys | join('\n') }}\n"
+    dest: /home/emergency/.ssh/authorized_keys
+    owner: emergency
+    group: emergency
+    mode: '0600'
+
+- name: Create persistent mountpoint
+  ansible.builtin.file:
+    path: /srv/data
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Mount preformatted persistent data volume
+  ansible.posix.mount:
+    path: /srv/data
+    src: "UUID={{ data_uuid }}"
+    fstype: ext4
+    opts: defaults,nodev,nosuid
+    state: mounted
+
+- name: Configure SSH authentication
+  ansible.builtin.template:
+    src: etc/ssh/sshd_config.d/00-hacklab.conf.j2
+    dest: /etc/ssh/sshd_config.d/00-hacklab.conf
+    owner: root
+    group: root
+    mode: '0600'
+    validate: /usr/sbin/sshd -t -f %s
+  notify: Reload ssh
+
+- name: Create SSH unit configuration directory
+  ansible.builtin.file:
+    path: /etc/systemd/system/ssh.service.d
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Require a loaded firewall before starting SSH
+  ansible.builtin.template:
+    src: etc/systemd/system/ssh.service.d/10-firewall.conf.j2
+    dest: /etc/systemd/system/ssh.service.d/10-firewall.conf
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Reload ssh
+
+- name: Validate host firewall before replacing active configuration
+  ansible.builtin.template:
+    src: etc/nftables.conf.j2
+    dest: /etc/nftables.conf
+    owner: root
+    group: root
+    mode: '0600'
+    validate: /usr/sbin/nft --check --file %s
+  notify: Reload nftables
+
+- name: Configure persistent journal
+  ansible.builtin.file:
+    path: /var/log/journal
+    state: directory
+    owner: root
+    group: systemd-journal
+    mode: '2755'
+
+- name: Create journald configuration directory
+  ansible.builtin.file:
+    path: /etc/systemd/journald.conf.d
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Explicitly enable persistent journald storage
+  ansible.builtin.template:
+    src: etc/systemd/journald.conf.d/70-hacklab.conf.j2
+    dest: /etc/systemd/journald.conf.d/70-hacklab.conf
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Restart journald
+
+- name: Install emergency audit rules
+  ansible.builtin.template:
+    src: etc/audit/rules.d/70-emergency.rules.j2
+    dest: /etc/audit/rules.d/70-emergency.rules
+    owner: root
+    group: root
+    mode: '0600'
+  notify: Load audit rules
+
+- name: Enable base services
+  ansible.builtin.systemd_service:
+    name: "{{ item }}"
+    state: started
+    enabled: true
+  loop: [nftables, auditd, chrony]
