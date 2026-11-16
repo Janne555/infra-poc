@@ -1,0 +1,2 @@
+# Install as root:dovecot 0640; use no_log and diff: false.
+odoo@{{ service_config.mail_domain }}:{{ mail_odoo_password_hash }}:{{ service_config.mail_vmail_uid }}:{{ service_config.mail_vmail_gid }}::/srv/data/mail/vmail/odoo@{{ service_config.mail_domain }}::

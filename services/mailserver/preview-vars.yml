@@ -1,0 +1,2 @@
+# Example secret input for rendering the draft templates.
+mail_odoo_password_hash: REPLACE_WITH_DOVECOT_SCHEME_AND_PASSWORD_HASH

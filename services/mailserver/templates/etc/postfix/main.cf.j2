@@ -1,0 +1,36 @@
+myhostname = {{ service_config.mail_hostname }}
+mydomain = {{ service_config.mail_domain }}
+myorigin = $mydomain
+inet_interfaces = all
+inet_protocols = ipv4
+mydestination = $myhostname, localhost.$mydomain, localhost
+mynetworks = 127.0.0.0/8
+relay_domains =
+
+virtual_mailbox_domains = {{ service_config.mail_domain }}
+virtual_mailbox_maps = hash:/etc/postfix/virtual_mailboxes
+virtual_alias_maps = regexp:/etc/postfix/virtual_aliases.regexp
+virtual_transport = lmtp:unix:private/dovecot-lmtp
+smtpd_reject_unlisted_recipient = yes
+smtpd_relay_restrictions = permit_sasl_authenticated, reject_unauth_destination
+smtpd_recipient_restrictions = reject_unlisted_recipient
+
+# TLS optional for inter-server delivery; mandatory on submission in master.cf.
+smtpd_tls_cert_file = {{ service_config.mail_tls_cert }}
+smtpd_tls_key_file = {{ service_config.mail_tls_key }}
+smtpd_tls_security_level = may
+smtp_tls_security_level = may
+smtp_tls_CApath = /etc/ssl/certs
+smtpd_tls_auth_only = yes
+smtpd_sasl_type = dovecot
+smtpd_sasl_path = private/auth
+smtpd_sasl_auth_enable = no
+smtpd_sasl_security_options = noanonymous
+smtpd_sender_login_maps = regexp:/etc/postfix/sender_login.regexp
+
+# Defer mail during Rspamd outages so senders can retry.
+smtpd_milters = inet:127.0.0.1:11332
+non_smtpd_milters = $smtpd_milters
+milter_protocol = 6
+milter_default_action = tempfail
+milter_mail_macros = i {mail_addr} {client_addr} {client_name} {auth_authen}

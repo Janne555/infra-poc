@@ -1,0 +1,11 @@
+# Private key generated/escrowed separately; publish selector TXT only with approval.
+sign_authenticated = true;
+sign_local = false;
+use_domain = "header";
+allow_username_mismatch = true;
+domain {
+  {{ service_config.mail_domain }} {
+    selector = "{{ service_config.mail_dkim_selector }}";
+    path = "/srv/data/mail/dkim/{{ service_config.mail_domain }}.{{ service_config.mail_dkim_selector }}.key";
+  }
+}

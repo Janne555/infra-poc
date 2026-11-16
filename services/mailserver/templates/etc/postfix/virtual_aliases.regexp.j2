@@ -1,0 +1,4 @@
+/^odoo-[^@]+@{{ service_config.mail_domain | regex_escape }}$/ odoo@{{ service_config.mail_domain }}
+/^jasenasiat@{{ service_config.mail_domain | regex_escape }}$/ odoo@{{ service_config.mail_domain }}
+/^hallitus@{{ service_config.mail_domain | regex_escape }}$/ odoo@{{ service_config.mail_domain }}
+/^postmaster@{{ service_config.mail_domain | regex_escape }}$/ {{ service_config.mail_postmaster_destination }}

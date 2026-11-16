@@ -1,0 +1,55 @@
+# Uses Dovecot 2.4 syntax; install as the complete dovecot.conf.
+dovecot_config_version = 2.4.0
+dovecot_storage_version = 2.4.0
+protocols {
+  imap = yes
+  lmtp = yes
+}
+listen = 0.0.0.0
+ssl = required
+ssl_server_cert_file = {{ service_config.mail_tls_cert }}
+ssl_server_key_file = {{ service_config.mail_tls_key }}
+auth_mechanisms = plain login
+auth_allow_cleartext = no
+auth_username_format = %{user | lower}
+mail_uid = vmail
+mail_gid = vmail
+mail_home = /srv/data/mail/vmail/%{user}
+mail_driver = maildir
+mail_path = ~/Maildir
+passdb passwd-file {
+  passwd_file_path = /etc/dovecot/users
+}
+userdb passwd-file {
+  passwd_file_path = /etc/dovecot/users
+}
+namespace inbox {
+  inbox = yes
+  separator = /
+}
+service imap-login {
+  inet_listener imap {
+    port = 0
+  }
+  inet_listener imaps {
+    port = 993
+    ssl = yes
+  }
+}
+service lmtp {
+  unix_listener /var/spool/postfix/private/dovecot-lmtp {
+    user = postfix
+    group = postfix
+    mode = 0600
+  }
+}
+service auth {
+  unix_listener /var/spool/postfix/private/auth {
+    user = postfix
+    group = postfix
+    mode = 0660
+  }
+}
+protocol lmtp {
+  postmaster_address = postmaster@{{ service_config.mail_domain }}
+}
