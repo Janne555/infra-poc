@@ -1,0 +1,23 @@
+zone: fi-hel1
+debian_template: REPLACE_WITH_VERIFIED_DEBIAN_STABLE_TEMPLATE_UUID
+network:
+  nat_plan: development
+  dns_servers: [94.237.127.9, 94.237.40.9]
+  subnets:
+    internal:
+      cidr: 10.42.10.0/24
+      gateway: 10.42.10.1
+      default_route: true
+    edge:
+      cidr: 10.42.20.0/24
+      gateway: 10.42.20.1
+      default_route: false
+postgresql:
+  plan: 1x1xCPU-2GB-25GB
+services:
+  reader:
+    server:
+      network: internal
+      plan: 1xCPU-2GB
+      private_ip: 10.43.0.12
+      data_gb: 10

@@ -1,0 +1,48 @@
+set -eu
+umask 077
+
+systemctl mask --runtime --now ssh.service ssh.socket
+mkdir -p /etc/systemd/system/ssh.service.d
+cat > /etc/systemd/system/ssh.service.d/10-firewall.conf <<'UNIT'
+[Unit]
+Requires=nftables.service
+After=nftables.service
+
+[Service]
+ExecStartPre=/usr/sbin/nft list chain inet hacklab input
+UNIT
+systemctl daemon-reload
+
+if ! command -v nft >/dev/null 2>&1; then
+    export DEBIAN_FRONTEND=noninteractive
+    apt-get update
+    apt-get install -y --no-install-recommends nftables
+fi
+
+cat > /etc/nftables.conf <<'NFT'
+#!/usr/sbin/nft -f
+flush ruleset
+table inet hacklab {
+    chain input {
+        type filter hook input priority 0; policy drop;
+        iifname "lo" accept
+        ct state established,related accept
+        ct state invalid drop
+        ip protocol icmp accept
+        meta l4proto ipv6-icmp accept
+        udp sport 67 udp dport 68 accept
+%{ for cidr in private_cidrs ~}
+        ip daddr ${private_ip} ip saddr ${cidr} tcp dport 22 accept
+%{ endfor ~}
+    }
+    chain forward { type filter hook forward priority 0; policy drop; }
+    chain output { type filter hook output priority 0; policy accept; }
+}
+NFT
+
+nft --check --file /etc/nftables.conf
+nft --file /etc/nftables.conf
+systemctl enable nftables.service
+systemctl unmask --runtime ssh.service ssh.socket
+# SSH is ordered after cloud-init; queue its start without waiting for this boot stage to finish.
+systemctl --no-block start ssh.service
