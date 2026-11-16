@@ -1,0 +1,15 @@
+**/.terraform/
+**/*.tfstate*
+**/*.tfplan
+**/crash.log
+**/*.auto.tfvars
+**/terraform.tfvars
+.env
+.venv/
+__pycache__/
+ansible/inventory/hosts.yml
+secrets/*.dec.*
+*.agekey
+**/.ansible/
+**/.cache/
+.bootstrap/
