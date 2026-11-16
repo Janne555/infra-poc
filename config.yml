@@ -1,0 +1,79 @@
+zone: fi-hel1
+debian_template: REPLACE_WITH_VERIFIED_DEBIAN_STABLE_TEMPLATE_UUID
+network:
+  nat_plan: development
+  dns_servers: [94.237.127.9, 94.237.40.9]
+  subnets:
+    internal:
+      cidr: 10.42.10.0/24
+      gateway: 10.42.10.1
+      default_route: true
+    edge:
+      cidr: 10.42.20.0/24
+      gateway: 10.42.20.1
+      default_route: false
+postgresql:
+  plan: 1x1xCPU-2GB-25GB
+services:
+  keycloak:
+    server:
+      network: edge
+      plan: 2xCPU-4GB
+      data_gb: 20
+      private_ip: 10.42.20.10
+      public_ip: true
+    postgresql:
+      enabled: true
+    config:
+      public_tcp_ports: [80, 443]
+      public_udp_ports: []
+  netbird:
+    server:
+      network: edge
+      plan: 2xCPU-4GB
+      data_gb: 20
+      private_ip: 10.42.20.11
+      public_ip: true
+    config:
+      public_tcp_ports: [80, 443]
+      public_udp_ports: [3478]
+  odoo:
+    server:
+      network: internal
+      plan: 2xCPU-4GB
+      data_gb: 40
+      private_ip: 10.42.10.12
+    postgresql:
+      enabled: true
+  mail:
+    server:
+      network: edge
+      plan: 2xCPU-4GB
+      data_gb: 40
+      private_ip: 10.42.20.13
+      public_ip: true
+    config:
+      public_tcp_ports: [25, 465, 587, 993]
+      public_udp_ports: []
+      mail_domain: example.com
+      mail_hostname: mail.example.com
+      mail_tls_cert: /etc/ssl/mail/fullchain.pem
+      mail_tls_key: /etc/ssl/mail/privkey.pem
+      mail_dkim_selector: mail1
+      mail_vmail_uid: 5000
+      mail_vmail_gid: 5000
+      mail_postmaster_destination: REPLACE_WITH_INDEPENDENT_MAINTAINER_ADDRESS
+  vaultwarden:
+    server:
+      network: internal
+      plan: 1xCPU-2GB
+      data_gb: 10
+      private_ip: 10.42.10.14
+    postgresql:
+      enabled: true
+  gatus:
+    server:
+      network: internal
+      plan: 1xCPU-2GB
+      data_gb: 10
+      private_ip: 10.42.10.15
