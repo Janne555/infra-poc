@@ -1,0 +1,7 @@
+# Replace both recipients with independently held maintainer public age keys.
+# Refuse to encrypt until placeholders have been replaced.
+creation_rules:
+  - path_regex: secrets/.*\.sops\.ya?ml$
+    age: >-
+      REPLACE_WITH_MAINTAINER_ONE_AGE_RECIPIENT,
+      REPLACE_WITH_MAINTAINER_TWO_AGE_RECIPIENT
